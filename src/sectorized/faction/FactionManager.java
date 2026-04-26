@@ -69,7 +69,7 @@ public class FactionManager implements Manager {
 
                         }},
                         {p -> {
-                            Call.openURI(p.con(), "https://discord.gg/AmdMXKkS9Q");
+                            Call.openURI(p.con, "https://discord.gg/AmdMXKkS9Q");
                         }}
                 };
             } else if (member.state == Member.MemberState.ELIMINATED) {
@@ -96,7 +96,7 @@ public class FactionManager implements Manager {
 
                         }},
                         {p -> {
-                            Call.openURI(p.con(), "https://discord.gg/AmdMXKkS9Q");
+                            Call.openURI(p.con, "https://discord.gg/AmdMXKkS9Q");
                         }}
                 };
             } else {
@@ -134,7 +134,7 @@ public class FactionManager implements Manager {
 
                         }},
                         {p -> {
-                            Call.openURI(p.con(), "https://discord.gg/AmdMXKkS9Q");
+                            Call.openURI(p.con, "https://discord.gg/AmdMXKkS9Q");
                         }}
                 };
             }
@@ -269,7 +269,10 @@ public class FactionManager implements Manager {
                 CoreBlock.CoreBuild coreBuild = (CoreBlock.CoreBuild) event.tile.build;
                 Faction faction = factionLogic.getFaction(event.tile.team());
 
-                if (coreBuild.equals(Building.bulletDamageEvent.build) && Building.bulletDamageEvent.source.team() != faction.team) {
+                if (Building.bulletDamageEvent.build != null
+                    && coreBuild.equals(Building.bulletDamageEvent.build)
+                    && Building.bulletDamageEvent.source != null
+                    && Building.bulletDamageEvent.source.team() != faction.team) {
                     faction.lastAttacker = Building.bulletDamageEvent.source.team();
                 }
 
@@ -324,6 +327,7 @@ public class FactionManager implements Manager {
             if (State.gameState == State.GameState.INACTIVE || State.gameState == State.GameState.GAMEOVER) return;
 
             Member member = memberLogic.playerLeave(event.player);
+            if (member == null) return;
 
             if (member.faction != null) {
                 if (!member.faction.members.contains(m -> m.online)) {
@@ -594,20 +598,16 @@ public class FactionManager implements Manager {
             Member member = memberLogic.getMember(player);
 
             if (args.length == 0) {
-                MessageUtils.sendMessage(member.player, "Usage: /register username#0000", MessageUtils.MessageLevel.INFO);
+                MessageUtils.sendMessage(member.player, "Usage: /register discordUsername", MessageUtils.MessageLevel.INFO);
                 return;
             }
 
-            String discordTag = String.join(" ", args);
+            String discordUsername = String.join(" ", args);
 
-            try {
-                if (DiscordBot.checkIfExists(discordTag)) {
-                    DiscordBot.register(discordTag, member);
-                } else {
-                    MessageUtils.sendMessage(member.player, "Couln´t find " + MessageUtils.cPlayer + discordTag + MessageUtils.cDefault + " on the Sectorized Discord, please check if you wrote your name and id correctly!", MessageUtils.MessageLevel.INFO);
-                }
-            } catch (IllegalArgumentException e) {
-                MessageUtils.sendMessage(member.player, "Invalid Tag format, a Discord Tag looks like this: username#0000", MessageUtils.MessageLevel.INFO);
+            if (DiscordBot.checkIfExists(discordUsername)) {
+                DiscordBot.register(discordUsername, member);
+            } else {
+                MessageUtils.sendMessage(member.player, "Couldn\u2019t find " + MessageUtils.cPlayer + discordUsername + MessageUtils.cDefault + " on the Sectorized Discord. Check your Discord username (no # needed)!", MessageUtils.MessageLevel.INFO);
             }
 
         });
@@ -623,3 +623,4 @@ public class FactionManager implements Manager {
         }
     }
 }
+

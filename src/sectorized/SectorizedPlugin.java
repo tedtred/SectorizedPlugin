@@ -41,6 +41,8 @@ public class SectorizedPlugin extends Plugin {
         for (Manager manager : managers) {
             manager.init();
         }
+
+        startSectorizedGamemode();
     }
 
     @Override
@@ -50,44 +52,53 @@ public class SectorizedPlugin extends Plugin {
         }
 
         handler.register("sectorized", "Hosts the sectorized gamemode.", args -> {
-            logic.reset();
-            state.rules = Rules.rules.copy();
-
-            for (Manager manager : this.managers) {
-                manager.reset();
-            }
-
-            Events.fire(new SectorizedEvents.GamemodeStartEvent());
-            Rules.setSpawnGroups(state.rules);
-            state.rules.infiniteResources = Config.c.infiniteResources;
-            state.set(GameState.State.paused);
-
-            Core.settings.put("playerlimit", 50);
-
-            while (true) {
-                try {
-                    net.host(Administration.Config.port.num());
-                    info("Opened a server on port @.", Administration.Config.port.num());
-                    break;
-                } catch (BindException e) {
-                    err("Unable to host: Port " + Administration.Config.port.num() + " already in use! Make sure no other servers are running on the same port in your network.");
-                    state.set(GameState.State.menu);
-                } catch (IOException e) {
-                    err(e);
-                    state.set(GameState.State.menu);
-                }
-
-                try {
-                    TimeUnit.SECONDS.sleep(1);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-
-            logic.play();
-
-            State.gameState = State.GameState.ACTIVE;
+            startSectorizedGamemode();
         });
+    }
+
+    private synchronized void startSectorizedGamemode() {
+        if (State.gameState != State.GameState.INACTIVE) {
+            info("Sectorized gamemode is already running; skipping duplicate start request.");
+            return;
+        }
+
+        logic.reset();
+        state.rules = Rules.rules.copy();
+
+        for (Manager manager : this.managers) {
+            manager.reset();
+        }
+
+        Events.fire(new SectorizedEvents.GamemodeStartEvent());
+        Rules.setSpawnGroups(state.rules);
+        state.rules.infiniteResources = Config.c.infiniteResources;
+        state.set(GameState.State.paused);
+
+        Core.settings.put("playerlimit", 50);
+
+        while (true) {
+            try {
+                net.host(Administration.Config.port.num());
+                info("Opened a server on port @.", Administration.Config.port.num());
+                break;
+            } catch (BindException e) {
+                err("Unable to host: Port " + Administration.Config.port.num() + " already in use! Make sure no other servers are running on the same port in your network.");
+                state.set(GameState.State.menu);
+            } catch (IOException e) {
+                err(e);
+                state.set(GameState.State.menu);
+            }
+
+            try {
+                TimeUnit.SECONDS.sleep(1);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+
+        logic.play();
+
+        State.gameState = State.GameState.ACTIVE;
     }
 
     @Override

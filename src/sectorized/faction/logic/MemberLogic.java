@@ -1,8 +1,10 @@
 package sectorized.faction.logic;
 
+import arc.util.Log;
 import arc.struct.Seq;
 import mindustry.game.Team;
 import mindustry.gen.Player;
+import mindustry.gen.Unit;
 import sectorized.constant.DiscordBot;
 import sectorized.constant.MessageUtils;
 import sectorized.faction.core.Member;
@@ -32,7 +34,10 @@ public class MemberLogic {
 
         if (member.faction == null) {
             member.player.team(Team.derelict);
-            member.player.unit().kill();
+            Unit unit = member.player.unit();
+            if (unit != null) {
+                unit.kill();
+            }
         } else {
             member.player.team(member.faction.team);
         }
@@ -47,7 +52,12 @@ public class MemberLogic {
     }
 
     public Member playerLeave(Player player) {
-        Member member = getMember(player);
+        Member member = members.find(m -> m.player.uuid().equals(player.uuid()));
+
+        if (member == null) {
+            Log.warn("Player left before member state was initialized: @", player.uuid());
+            return null;
+        }
 
         persistence.setRanking(member);
         member.online = false;

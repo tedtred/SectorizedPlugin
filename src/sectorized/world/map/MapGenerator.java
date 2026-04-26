@@ -13,6 +13,7 @@ import mindustry.world.Tile;
 import mindustry.world.Tiles;
 import mindustry.world.blocks.environment.Floor;
 import sectorized.SectorizedEvents;
+import sectorized.constant.Config;
 import sectorized.constant.DiscordBot;
 import sectorized.constant.Loadout;
 import sectorized.constant.State;
@@ -36,7 +37,7 @@ public class MapGenerator implements Cons<Tiles> {
 
     @Override
     public void get(Tiles tiles) {
-        final String planet = biomeVote != null ? biomeVote.getPlanet() : Mathf.chance(0.7) ? Planets.serpulo.name : Planets.erekir.name;
+        final String planet = biomeVote != null ? biomeVote.getPlanet() : (Config.c.experimentalMapsEnabled && Mathf.chance(0.3)) ? Planets.erekir.name : Planets.serpulo.name;
         State.planet = planet;
         state.rules.loadout = Loadout.getLoadout(1);
 
@@ -142,12 +143,8 @@ public class MapGenerator implements Cons<Tiles> {
 
         if (planet.equals(Planets.serpulo.name)) {
             state.rules.env = Planets.serpulo.defaultEnv;
-            state.rules.hiddenBuildItems.clear();
-            state.rules.hiddenBuildItems.addAll(Planets.serpulo.hiddenItems);
         } else if (planet.equals(Planets.erekir.name)) {
             state.rules.env = Planets.erekir.defaultEnv;
-            state.rules.hiddenBuildItems.clear();
-            state.rules.hiddenBuildItems.addAll(Planets.erekir.hiddenItems);
         }
 
         state.map = new Map(StringMap.of("name", mostFrequentBiomes));

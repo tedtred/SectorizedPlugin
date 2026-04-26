@@ -82,7 +82,8 @@ public class SectorManager implements Manager {
                 event.tile.setNet(Blocks.air);
             }
 
-            if (event.tile.build instanceof ConstructBlock.ConstructBuild constructBuild) {
+            if (event.tile.build instanceof ConstructBlock.ConstructBuild) {
+                ConstructBlock.ConstructBuild constructBuild = (ConstructBlock.ConstructBuild) event.tile.build;
                 if (constructBuild.current == Blocks.coreFoundation || constructBuild.current == Blocks.coreNucleus) {
                     sectorLogic.upgradeArea(event.tile.x, event.tile.y, (CoreBlock) constructBuild.current, event.team.id);
                 }
@@ -110,7 +111,7 @@ public class SectorManager implements Manager {
             sectorLogic.removeArea(event.coreBuild.tile.x, event.coreBuild.tile.y);
 
             for (Member member : event.faction.members) {
-                Call.announce(member.player.con(), MessageUtils.cDanger + "You lost a core at " + MessageUtils.cHighlight1 + "[" + event.coreBuild.tile.x + " " + event.coreBuild.tile.y + "]");
+                Call.announce(member.player.con, MessageUtils.cDanger + "You lost a core at " + MessageUtils.cHighlight1 + "[" + event.coreBuild.tile.x + " " + event.coreBuild.tile.y + "]");
             }
         });
 

@@ -187,6 +187,11 @@ public class UpdateManager implements Manager {
         });
 
         Events.on(EventType.PlayerJoin.class, event -> {
+            if (State.gameState == State.GameState.GAMEOVER) {
+                event.player.kick(Packets.KickReason.serverRestarting);
+                return;
+            }
+
             setServerDescription();
         });
 
@@ -202,7 +207,7 @@ public class UpdateManager implements Manager {
                             "You have 25 seconds to submit your vote!",
                     new String[][]{
                             {MessageUtils.cHighlight2 + "Serpulo"},
-                            {MessageUtils.cHighlight3 + "Erekir"},
+                            {(Config.c.experimentalMapsEnabled ? MessageUtils.cHighlight3 : "[gray]") + "Erekir" + (Config.c.experimentalMapsEnabled ? "" : " [gray](experimental - disabled)")},
                             {MessageUtils.cInfo + "Vote for a specific biome"},
                             {MessageUtils.cDanger + "Cancel"}
                     },
@@ -228,6 +233,10 @@ public class UpdateManager implements Manager {
                             }},
                             {p -> {
                                 if (!biomeVoteFinished) {
+                                    if (!Config.c.experimentalMapsEnabled) {
+                                        MessageUtils.sendMessage(player, "Erekir maps are currently " + MessageUtils.cDanger + "disabled" + MessageUtils.cDefault + " (experimental). Enable experimentalMapsEnabled in server config to unlock.", MessageUtils.MessageLevel.WARNING);
+                                        return;
+                                    }
                                     for (int i = 0; i < Biomes.all.size(); i++) {
                                         Biomes.Biome biome = Biomes.all.get(i);
                                         if (biome.getPlanet().equals(Planets.erekir.name)) {
@@ -250,13 +259,17 @@ public class UpdateManager implements Manager {
         });
 
         MenuUtils.addMenu(21, player -> {
-            String[][] options = new String[Biomes.all.size() + 1][1];
-            int[][] links = new int[Biomes.all.size() + 1][1];
-            MenuUtils.Handler[][] handlers = new MenuUtils.Handler[Biomes.all.size() + 1][1];
+            java.util.List<Biomes.Biome> availableBiomes = Biomes.all.stream()
+                    .filter(b -> b.getPlanet().equals(Planets.serpulo.name) || Config.c.experimentalMapsEnabled)
+                    .collect(java.util.stream.Collectors.toList());
+
+            String[][] options = new String[availableBiomes.size() + 1][1];
+            int[][] links = new int[availableBiomes.size() + 1][1];
+            MenuUtils.Handler[][] handlers = new MenuUtils.Handler[availableBiomes.size() + 1][1];
 
             final int[] i = {0};
-            Biomes.all.stream().filter(e -> e.getPlanet().equals(Planets.serpulo.name)).sorted((e1, e2) -> e1.toString().compareToIgnoreCase(e2.toString())).forEach(biome -> {
-                options[i[0]][0] = (biome.getPlanet().equals(Planets.serpulo.name) ? MessageUtils.cHighlight2 : MessageUtils.cHighlight3) + biome;
+            availableBiomes.stream().filter(e -> e.getPlanet().equals(Planets.serpulo.name)).sorted((e1, e2) -> e1.toString().compareToIgnoreCase(e2.toString())).forEach(biome -> {
+                options[i[0]][0] = MessageUtils.cHighlight2 + biome;
                 links[i[0]][0] = -1;
                 handlers[i[0]][0] = p -> {
                     if (!biomeVoteFinished) {
@@ -270,24 +283,26 @@ public class UpdateManager implements Manager {
                 i[0]++;
             });
 
-            Biomes.all.stream().filter(e -> e.getPlanet().equals(Planets.erekir.name)).sorted((e1, e2) -> e1.toString().compareToIgnoreCase(e2.toString())).forEach(biome -> {
-                options[i[0]][0] = (biome.getPlanet().equals(Planets.serpulo.name) ? MessageUtils.cHighlight2 : MessageUtils.cHighlight3) + biome;
-                links[i[0]][0] = -1;
-                handlers[i[0]][0] = p -> {
-                    if (!biomeVoteFinished) {
-                        biomeVotes.put(biome, biomeVotes.getOrDefault(biome, 0) + 1);
-                        MessageUtils.sendMessage(player, "Voted for " + MessageUtils.cInfo + biome + MessageUtils.cDefault, MessageUtils.MessageLevel.INFO);
-                    } else {
-                        MessageUtils.sendMessage(player, "Biome vote over!", MessageUtils.MessageLevel.WARNING);
-                    }
-                };
+            if (Config.c.experimentalMapsEnabled) {
+                availableBiomes.stream().filter(e -> e.getPlanet().equals(Planets.erekir.name)).sorted((e1, e2) -> e1.toString().compareToIgnoreCase(e2.toString())).forEach(biome -> {
+                    options[i[0]][0] = MessageUtils.cHighlight3 + biome;
+                    links[i[0]][0] = -1;
+                    handlers[i[0]][0] = p -> {
+                        if (!biomeVoteFinished) {
+                            biomeVotes.put(biome, biomeVotes.getOrDefault(biome, 0) + 1);
+                            MessageUtils.sendMessage(player, "Voted for " + MessageUtils.cInfo + biome + MessageUtils.cDefault, MessageUtils.MessageLevel.INFO);
+                        } else {
+                            MessageUtils.sendMessage(player, "Biome vote over!", MessageUtils.MessageLevel.WARNING);
+                        }
+                    };
 
-                i[0]++;
-            });
+                    i[0]++;
+                });
+            }
 
-            options[Biomes.all.size()][0] = MessageUtils.cDanger + "Cancel";
-            links[Biomes.all.size()][0] = -1;
-            handlers[Biomes.all.size()][0] = p -> {
+            options[availableBiomes.size()][0] = MessageUtils.cDanger + "Cancel";
+            links[availableBiomes.size()][0] = -1;
+            handlers[availableBiomes.size()][0] = p -> {
 
             };
 
@@ -376,7 +391,7 @@ public class UpdateManager implements Manager {
 
                     Events.fire(new SectorizedEvents.ShutdownEvent());
 
-                    System.exit(1);
+                    System.exit(0);
                 }
 
                 MessageUtils.sendMessage("Server is restarting in " + MessageUtils.cInfo + (countdown.getAndDecrement()) + MessageUtils.cDefault + " second(s).", MessageUtils.MessageLevel.INFO);

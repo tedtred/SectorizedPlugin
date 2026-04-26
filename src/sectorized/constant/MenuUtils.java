@@ -31,7 +31,7 @@ public class MenuUtils {
                     next.menuId = nextMenuId;
 
                     lastContents.put(event.player, next);
-                    Call.menu(event.player.con(), nextMenuId, next.title, next.message, next.options);
+                    Call.menu(event.player.con, nextMenuId, next.title, next.message, next.options);
                 }
 
                 handler.get(event.player);
@@ -57,7 +57,7 @@ public class MenuUtils {
         content.menuId = menuId;
 
         lastContents.put(player, content);
-        Call.menu(player.con(), menuId, content.title, content.message, content.options);
+        Call.menu(player.con, menuId, content.title, content.message, content.options);
     }
 
     public static class MenuContent {

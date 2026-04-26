@@ -1,13 +1,22 @@
-apply plugin: "java"
+plugins {
+    id 'java'
+}
 
-version '1.0'
+version = '1.0'
 
-sourceCompatibility = JavaVersion.VERSION_16
+sourceSets.main.java.srcDirs = ['src']
 
-sourceSets.main.java.srcDirs = ["src"]
+java {
+    // Use a modern JDK locally while emitting Java 8 bytecode for host compatibility.
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
 
-compileJava.options.encoding = "UTF-8"
-compileTestJava.options.encoding = "UTF-8"
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 8
+}
 
 repositories {
     mavenCentral()
@@ -17,29 +26,20 @@ repositories {
 
 ext {
     //the build number that this plugin is made for
-    mindustryVersion = 'v145'
-    jabelVersion = "93fde537c7"
-}
-
-//java 8 backwards compatibility flag
-allprojects {
-    tasks.withType(JavaCompile) {
-        options.compilerArgs.addAll(['--release', '8'])
-    }
+    mindustryVersion = 'v157'
 }
 
 dependencies {
-    implementation 'org.jetbrains:annotations:20.1.0'
+    implementation 'org.jetbrains:annotations:24.1.0'
     compileOnly "com.github.Anuken.Arc:arc-core:$mindustryVersion"
     compileOnly "com.github.Anuken.Mindustry:core:$mindustryVersion"
-    annotationProcessor "com.github.Anuken:jabel:$jabelVersion"
-    implementation 'org.mariadb.jdbc:mariadb-java-client:2.1.2'
+    implementation 'org.mariadb.jdbc:mariadb-java-client:3.4.1'
     implementation 'com.google.code.gson:gson:2.9.0'
-    implementation 'net.dv8tion:JDA:5.0.0-alpha.17'
+    implementation 'net.dv8tion:JDA:5.0.0'
 }
 
 jar {
-    archiveFileName = "${project.archivesBaseName}.jar"
+    archiveFileName = "${project.name}.jar"
     from {
         configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
     }
@@ -48,7 +48,57 @@ jar {
         include "plugin.json"
     }
 
-    destinationDirectory.set(file("$buildDir/../mindustry-server-v7/config/mods"))
-
     duplicatesStrategy = DuplicatesStrategy.INCLUDE
+}
+
+def serverDir = providers.gradleProperty('mindustryServerDir')
+def modsDir = providers.gradleProperty('mindustryModsDir')
+
+tasks.register('deployPlugin', Copy) {
+    dependsOn tasks.jar
+
+    from(tasks.jar.archiveFile)
+
+    into(modsDir.orElse(serverDir.map { "${it}/config/mods" }))
+
+    doFirst {
+        if (!modsDir.isPresent() && !serverDir.isPresent()) {
+            throw new GradleException('Set -PmindustryServerDir=<path> or -PmindustryModsDir=<path> to deploy the plugin jar.')
+        }
+    }
+}
+
+// ── Local dev server ──────────────────────────────────────────────────────
+// Server lives in /mindustry-server-v7/ which is already in .gitignore.
+def devServerDir = file('mindustry-server-v7')
+def devServerJar = file("mindustry-server-v7/server-release-${mindustryVersion}.jar")
+def devModsDir   = file('mindustry-server-v7/config/mods')
+
+tasks.register('downloadDevServer') {
+    description = 'Downloads the Mindustry server jar matching mindustryVersion if not already present.'
+    outputs.file(devServerJar)
+    onlyIf { !devServerJar.exists() }
+    doLast {
+        devServerDir.mkdirs()
+        devModsDir.mkdirs()
+        def url = "https://github.com/Anuken/Mindustry/releases/download/${mindustryVersion}/server-release.jar"
+        logger.lifecycle("Downloading Mindustry server ${mindustryVersion}...")
+        new URL(url).withInputStream { i -> devServerJar.withOutputStream { o -> o << i } }
+        logger.lifecycle("Saved to ${devServerJar}")
+    }
+}
+
+tasks.register('deployDevPlugin', Copy) {
+    dependsOn tasks.jar, tasks.downloadDevServer
+    description = 'Builds the plugin and copies the jar into the local dev server mods folder.'
+    from(tasks.jar.archiveFile)
+    into(devModsDir)
+}
+
+tasks.register('startDevServer', Exec) {
+    dependsOn tasks.deployDevPlugin
+    description = 'Builds and deploys the plugin, then starts the local dev server. Ctrl+C to stop.'
+    workingDir = devServerDir
+    commandLine 'java', '-jar', devServerJar.absolutePath
+    standardInput = System.in
 }

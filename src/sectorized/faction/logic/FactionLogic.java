@@ -88,13 +88,19 @@ public class FactionLogic {
         oldFaction.removeMember(member);
         newFaction.addMember(member);
 
-        member.player.unit().kill();
+        Unit unit = member.player.unit();
+        if (unit != null) {
+            unit.kill();
+        }
     }
 
     public void addToFaction(Faction newFaction, Member member) {
         newFaction.addMember(member);
 
-        member.player.unit().kill();
+        Unit unit = member.player.unit();
+        if (unit != null) {
+            unit.kill();
+        }
     }
 
     public void removeFaction(Faction defender, Faction attacker, boolean fallback) {
@@ -139,7 +145,10 @@ public class FactionLogic {
                 m.state = Member.MemberState.ELIMINATED;
                 m.faction = null;
                 m.player.team(Team.derelict);
-                m.player.unit().kill();
+                Unit unit = m.player.unit();
+                if (unit != null) {
+                    unit.kill();
+                }
 
                 Timer.schedule(() -> {
                     if (m.faction == null) {

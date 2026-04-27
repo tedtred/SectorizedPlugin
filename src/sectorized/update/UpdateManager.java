@@ -14,7 +14,6 @@ import mindustry.gen.Call;
 import mindustry.gen.Groups;
 import mindustry.gen.Player;
 import mindustry.net.Administration;
-import mindustry.net.Packets;
 import mindustry.type.ItemSeq;
 import mindustry.type.ItemStack;
 import sectorized.Manager;
@@ -188,7 +187,9 @@ public class UpdateManager implements Manager {
 
         Events.on(EventType.PlayerJoin.class, event -> {
             if (State.gameState == State.GameState.GAMEOVER) {
-                event.player.kick(Packets.KickReason.serverRestarting);
+                // Allow player to join and vote during endgame phase instead of kicking
+                // They will see the vote menu and participate in the map selection
+                MenuUtils.showMenu(20, event.player);
                 return;
             }
 
@@ -387,7 +388,6 @@ public class UpdateManager implements Manager {
             Timer.schedule(() -> {
                 if (countdown.get() == 0) {
                     Log.info("Restarting server ...");
-                    netServer.kickAll(Packets.KickReason.serverRestarting);
 
                     Events.fire(new SectorizedEvents.ShutdownEvent());
 
